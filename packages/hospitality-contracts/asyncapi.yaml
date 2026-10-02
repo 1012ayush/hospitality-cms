@@ -1,0 +1,200 @@
+asyncapi: 2.6.0
+info:
+  title: Hotel Channel Manager Events
+  version: 1.0.0
+defaultContentType: application/cloudevents+json
+servers:
+  local:
+    url: localhost:9092
+    protocol: kafka
+channels:
+  webhook.raw.events:
+    description: Sanitized raw partner payloads; payment card and VCC data removed before publish.
+    publish:
+      message:
+        name: SanitizedWebhookReceived
+        payload: { $ref: "#/components/schemas/CloudEvent" }
+    bindings:
+      kafka:
+        bindingVersion: "0.4.0"
+        key: { type: string, description: property_id }
+  reservation.canonical.events:
+    description: Canonical reservation lifecycle events from committed state/outbox.
+    publish:
+      message:
+        name: ReservationCanonicalEvent
+        payload: { $ref: "#/components/schemas/CloudEvent" }
+    bindings:
+      kafka:
+        bindingVersion: "0.4.0"
+        key: { type: string, description: property_id }
+  inventory.delta.events:
+    description: Committed inventory and restriction changes for outbound propagation.
+    publish:
+      message:
+        name: InventoryDeltaEvent
+        payload: { $ref: "#/components/schemas/CloudEvent" }
+    bindings:
+      kafka:
+        bindingVersion: "0.4.0"
+        key: { type: string, description: property_id }
+  dead.letter.queue:
+    description: Invalid or exhausted events with sanitized error and replay metadata.
+    publish:
+      message:
+        name: DeadLetterEvent
+        payload: { $ref: "#/components/schemas/CloudEvent" }
+    bindings:
+      kafka:
+        bindingVersion: "0.4.0"
+        key: { type: string, description: property_id }
+components:
+  schemas:
+    CloudEvent:
+      type: object
+      required: [specversion, id, source, type, time, data]
+      properties:
+        specversion: { type: string, const: "1.0" }
+        id: { type: string }
+        source: { type: string }
+        type:
+          type: string
+          enum:
+            - com.hospitality.ari.delta
+            - com.hospitality.reservation.created
+            - com.hospitality.reservation.modified
+            - com.hospitality.reservation.cancelled
+            - com.hospitality.reservation.no_show
+            - com.hospitality.reservation.oversold
+            - com.hospitality.inventory.propagation.requested
+            - com.hospitality.inventory.propagation.failed
+        subject: { type: string }
+        time: { type: string, format: date-time }
+        datacontenttype: { type: string }
+        data:
+          oneOf:
+            - { $ref: "#/components/schemas/Reservation" }
+            - { $ref: "#/components/schemas/AriDelta" }
+            - { $ref: "#/components/schemas/RawWebhookPayload" }
+            - { $ref: "#/components/schemas/DeadLetterPayload" }
+      description: Use property_id as the Kafka message key for property-scoped events.
+    Reservation:
+      type: object
+      required:
+        [
+          tenantId,
+          propertyId,
+          channelConnectionId,
+          channel,
+          reservationId,
+          channelVersion,
+          sourceSequence,
+          lifecycle,
+          status,
+          stay,
+          receivedAt,
+        ]
+      anyOf:
+        - required: [rooms]
+        - required: [roomTypeId, occupancy]
+      properties:
+        tenantId: { type: string, format: uuid }
+        propertyId: { type: string, format: uuid }
+        channelConnectionId: { type: string, format: uuid }
+        channel:
+          {
+            type: string,
+            enum: [booking_com, expedia_eqc, airbnb, pms, rms, other],
+          }
+        reservationId: { type: string }
+        channelVersion:
+          {
+            type: string,
+            description: Opaque source metadata; never sort lexically,
+          }
+        sourceSequence: { type: integer, minimum: 0, format: int64 }
+        lifecycle: { type: string, enum: [new, modified, cancelled, no_show] }
+        status:
+          { type: string, enum: [new, confirmed, modified, cancelled, no_show] }
+        roomTypeId: { type: string, format: uuid }
+        ratePlanId: { type: string, format: uuid }
+        stay:
+          type: object
+          required: [checkIn, checkOut, propertyTimeZone]
+          properties:
+            checkIn: { type: string, format: date }
+            checkOut: { type: string, format: date }
+            propertyTimeZone: { type: string }
+        occupancy:
+          type: object
+          required: [adults]
+          properties:
+            adults: { type: integer, minimum: 0 }
+            children: { type: integer, minimum: 0 }
+        guest:
+          {
+            type: object,
+            description: Guest PII is minimized by integration policy,
+          }
+        paymentReference:
+          { type: string, description: Token/reference only; never PAN or CVV }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        totalAmount: { type: number, minimum: 0 }
+        sourceUpdatedAt: { type: string, format: date-time }
+        receivedAt: { type: string, format: date-time }
+        oversold: { type: boolean }
+    AriDelta:
+      type: object
+      required:
+        [
+          tenantId,
+          propertyId,
+          channelConnectionId,
+          source,
+          roomTypeId,
+          stay,
+          sourceVersion,
+          receivedAt,
+        ]
+      properties:
+        tenantId: { type: string, format: uuid }
+        propertyId: { type: string, format: uuid }
+        channelConnectionId: { type: string, format: uuid }
+        source: { type: string, enum: [pms, rms, channel_manager, ota] }
+        roomTypeId: { type: string, format: uuid }
+        ratePlanId: { type: string, format: uuid }
+        stay:
+          type: object
+          required: [startDate, endDate, propertyTimeZone]
+          properties:
+            startDate: { type: string, format: date }
+            endDate: { type: string, format: date }
+            propertyTimeZone: { type: string }
+        availability: { type: integer, minimum: 0 }
+        closed: { type: boolean }
+        restrictions: { type: object }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        nightlyRates: { type: array, items: { type: object } }
+        sourceVersion: { type: string }
+        sourceUpdatedAt: { type: string, format: date-time }
+        receivedAt: { type: string, format: date-time }
+    RawWebhookPayload:
+      type: object
+      required: [tenantId, propertyId, channelConnectionId, payload]
+      properties:
+        tenantId: { type: string, format: uuid }
+        propertyId: { type: string, format: uuid }
+        channelConnectionId: { type: string, format: uuid }
+        payload:
+          {
+            type: object,
+            description: Sanitized raw content; no payment card/VCC data,
+          }
+    DeadLetterPayload:
+      type: object
+      required: [sourceTopic, errorCode, sanitizedPayload]
+      properties:
+        sourceTopic: { type: string }
+        errorCode: { type: string }
+        errorDetail: { type: string }
+        sanitizedPayload: { type: object }

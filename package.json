@@ -1,0 +1,30 @@
+{
+  "name": "hotel-channel-manager",
+  "private": true,
+  "packageManager": "pnpm@9.14.2",
+  "engines": {
+    "node": ">=20 <21",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:migrate": "atlas migrate apply --env local",
+    "db:hash": "atlas migrate hash --dir file://packages/db/migrations",
+    "db:status": "atlas migrate status --env local",
+    "db:test": "node scripts/db-test.mjs",
+    "format": "prettier --write .",
+    "test:integration": "pnpm --filter @hcm/core-state-engine test",
+    "dashboard:dev": "pnpm --filter @hcm/testing-dashboard dev",
+    "load:steady": "k6 run tests/load/steady.js",
+    "load:burst": "k6 run tests/load/burst.js"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "turbo": "^2.3.3",
+    "typescript": "~5.6.3"
+  }
+}

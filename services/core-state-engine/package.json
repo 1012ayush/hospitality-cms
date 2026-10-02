@@ -1,0 +1,29 @@
+{
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "start": "node dist/index.js",
+    "lint": "prettier --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "dev": "tsx watch src/index.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "vitest": "^2.1.5",
+    "testcontainers": "^10.16.0",
+    "@types/pg": "^8.11.11"
+  },
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@hcm/shared": "workspace:*",
+    "@hcm/db": "workspace:*",
+    "pg": "^8.13.1",
+    "@hcm/hospitality-contracts": "workspace:*",
+    "kysely": "^0.27.5",
+    "ioredis": "^5.4.1",
+    "kafkajs": "^2.2.4"
+  },
+  "name": "@hcm/core-state-engine",
+  "type": "module"
+}

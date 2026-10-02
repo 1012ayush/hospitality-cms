@@ -1,0 +1,14 @@
+h1:61uXGosUw/s3tok/kyclXljUCjvUMkW5EtNhFodPdIo=
+0001_foundation.sql h1:YTT5X/pqGW2B1gycKZk8N09cl0lDf9c1AJJW3KhbGz8=
+0002_catalog.sql h1:gOx4PHWQ+Twf8KKeKlbf+gIMVq+7ZHlqwMurUBH6S54=
+0003_inventory.sql h1:ZwTnwfRV9FRbRa506TD6dryxfpCrRE71frcbnmGWovw=
+0004_channels.sql h1:iDiXYHHpltTY3Ut2uRaDg/BH7/IH/urtkSbeXz89s4c=
+0005_reservations.sql h1:izo0YZxzU4Vw2Xoyt6pHnhBL2TD8Yi/p0iBaUbDiOTE=
+0006_events_ops.sql h1:M47TpEWnlz2FS2UG4+q8fbk9ydxXcOVji4LrlUPPTZc=
+0007_partitions_rls.sql h1:VCdNvvj5E1kJyLDsJrwe1pvBXJydwJSA4j3AznHC5ww=
+0008_indexes.sql h1:rY7dwoI4JkmEGR3RY0Bw2NIh2Ds/XOd8S3i/UJXmmwU=
+0009_indexes_concurrently.sql h1:ZjIy3nQkqBl7uT2glWXeN3E3U5niBSLqhi59v6XFiBE=
+0010_schema_fixes.sql h1:9jYAISSb8fapIX4h3EUZTNFLuBzysThiMEqIKclx6x4=
+0011_reservation_night_allocation.sql h1:7Cxx151wk1df6FT/uBHJ9PfK+rQHooHEuGRlJWjO+YU=
+0012_outbox_leases.sql h1:2BrZ3upM1bq6P/1yd7dQQrdM/3+Np0RW6kx1VTCr/mw=
+0013_outbox_partition_order.sql h1:zDVAb4Zgz1TcOr/3LLtp5RZ5Blv1XfkHRrcsox3j8yI=

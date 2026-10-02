@@ -1,0 +1,22 @@
+{
+  "name": "@hcm/adapter-base",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "prettier --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@hcm/hospitality-contracts": "workspace:*",
+    "@hcm/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.3",
+    "vitest": "^2.1.5"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
+}

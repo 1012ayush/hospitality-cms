@@ -1,0 +1,9 @@
+FROM postgres:16-bookworm
+
+# Debian package provides pgTAP extension files for this PostgreSQL major version.
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends postgresql-16-pgtap \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY packages/db/roles-and-grants.sql /workspace/roles-and-grants.sql
+COPY packages/db/tests/ /workspace/tests/

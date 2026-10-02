@@ -1,0 +1,10 @@
+# Partition maintenance job spec
+
+- **Job:** `hcm-partition-maintenance` (Kubernetes CronJob in production; local cron/CI invocation in development).
+- **Schedule:** daily at 00:20 UTC. Ensure current month plus the next 18 monthly partitions exist; inventory reservations can be booked ahead, so alert if the configured booking horizon exceeds this buffer.
+- **Execution:** connect as a dedicated login member of `hcm_worker`; for each requested month call `BEGIN; SELECT set_config('app.organization_id', '<trusted-tenant-uuid>', true); SELECT hcm.worker_ensure_month_partitions('<month-start>'::date); COMMIT;`. Since partitions are shared across tenants, invoke once under a designated maintenance tenant context; function is SECURITY DEFINER and creates both parent partitions. Do not accept tenant IDs from user input.
+- **Safety:** job has no table ownership, no `BYPASSRLS`, and no arbitrary DDL grant. The SECURITY DEFINER wrapper has fixed `search_path` and is the only DDL capability exposed.
+- **Retention:** retain `inventory_days` through the reservation/audit horizon; do not drop historical partitions automatically. Retain `sync_logs` per approved operational/privacy policy (initial proposal 13 months); detach/archive/drop only after backup verification and legal-retention checks.
+- **Monitoring:** emit success/failure, duration, partition count, and months-ahead gauge. Alert if any parent lacks a partition for a date within the booking horizon, or if the job fails twice consecutively.
+- **Concurrency:** acquire a PostgreSQL advisory lock around the maintenance run; serialize multiple job instances. Partition creation is idempotent through `IF NOT EXISTS`.
+- **DEFAULT partitions:** `inventory_days_default` and `sync_logs_default` absorb dates/times outside the pre-created month window. Before creating a specific month partition, check for rows in that month in DEFAULT and relocate them transactionally; PostgreSQL refuses attachment while overlapping rows remain. Migration 0010's helper raises a clear error if such rows exist rather than silently dropping them.

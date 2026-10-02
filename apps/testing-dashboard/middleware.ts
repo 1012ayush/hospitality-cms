@@ -1,0 +1,4 @@
+import { NextResponse, type NextRequest } from "next/server";
+function equal(a:string,b:string){let diff=a.length^b.length;for(let i=0;i<Math.max(a.length,b.length);i++)diff|=(a.charCodeAt(i)||0)^(b.charCodeAt(i)||0);return diff===0}
+export function middleware(req:NextRequest){if(process.env.DASHBOARD_AUTH_DISABLED==="true")return process.env.NODE_ENV==="production"?new Response("Auth bypass forbidden in production",{status:503}):NextResponse.next();const password=process.env.DASHBOARD_AUTH_PASSWORD;if(!password)return new Response("DASHBOARD_AUTH_PASSWORD required",{status:503});const expected=`Basic ${btoa(`hcm:${password}`)}`;if(!equal(req.headers.get("authorization")??"",expected))return new Response("Authentication required",{status:401,headers:{"WWW-Authenticate":'Basic realm="HCM Testing Dashboard", charset="UTF-8"',"Cache-Control":"no-store"}});return NextResponse.next()}
+export const config={matcher:["/((?!_next/static|_next/image|favicon.ico).*)"]};

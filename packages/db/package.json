@@ -1,0 +1,19 @@
+{
+  "name": "@hcm/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "migrate": "atlas migrate apply --env local",
+    "status": "atlas migrate status --env local"
+  },
+  "dependencies": {
+    "kysely": "^0.27.5",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {}
+}
