@@ -14,11 +14,12 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@hcm/hospitality-contracts": "workspace:*",
     "@hcm/shared": "workspace:*",
     "fastify": "^5.2.1",
-    "@hcm/hospitality-contracts": "workspace:*",
-    "kafkajs": "^2.2.4",
-    "ioredis": "^5.4.1"
+    "ioredis": "^5.4.1",
+    "kafkajs": "^2.2.4"
   },
   "name": "@hcm/ingestion-gateway",
   "type": "module"

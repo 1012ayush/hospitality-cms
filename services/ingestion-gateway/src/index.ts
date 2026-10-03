@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import cors from "@fastify/cors";
 import { createHmac, createHash, timingSafeEqual } from "node:crypto";
 import { CloudEventSchema } from "@hcm/hospitality-contracts";
 import {
@@ -95,6 +96,11 @@ function secureHexEqual(expectedHex: string, supplied: string): boolean {
 export function buildGateway(deps: GatewayDependencies): FastifyInstance {
   const logger = deps.logger;
   const app = Fastify({ bodyLimit: MAX_BODY_BYTES, logger: false });
+  app.register(cors, {
+    origin: process.env.CORS_ORIGIN ?? true,
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "x-hcm-timestamp", "x-hcm-signature"],
+  });
   app.removeContentTypeParser("application/json");
   app.addContentTypeParser(
     "application/json",
