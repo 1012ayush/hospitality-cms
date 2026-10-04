@@ -8,14 +8,17 @@
     "dev": "tsx watch src/index.ts"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^20.17.10",
     "tsx": "^4.19.2",
     "vitest": "^2.1.5"
   },
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@hcm/hospitality-contracts": "workspace:*",
     "@hcm/shared": "workspace:*",
-    "@hcm/hospitality-contracts": "workspace:*"
+    "express": "^5.2.1"
   },
   "name": "@hcm/admin-api",
   "type": "module"
