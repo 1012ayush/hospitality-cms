@@ -1,3 +1,4 @@
+import express from "express";
 import { createHash } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 import type { Redis } from "ioredis";
@@ -980,6 +981,15 @@ async function main(): Promise<void> {
   );
   await producer.connect();
   logger.info("Core state engine dependencies connected");
+  // ADD THE DUMMY WEB SERVER
+  const app = express();
+  app.get('/health', (req, res) => res.status(200).json({ status: 'core-state-engine alive' }));
+
+  const PORT = Number(process.env.PORT) || 8082; 
+
+  app.listen(PORT, '0.0.0.0', () => {
+      logger.info(`✅ Dummy Web Server listening on 0.0.0.0:${PORT} for Render health checks`);
+  });
   const abort = new AbortController();
   process.once("SIGTERM", () => abort.abort());
   process.once("SIGINT", () => abort.abort());
