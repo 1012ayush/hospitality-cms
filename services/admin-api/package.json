@@ -18,10 +18,14 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@hcm/hospitality-contracts": "workspace:*",
-    "@hcm/shared": "workspace:*",
-    "express": "^5.2.1"
-  },
+  "@hcm/db": "workspace:*",
+  "@hcm/hospitality-contracts": "workspace:*",
+  "@hcm/shared": "workspace:*",
+  "cors": "^2.8.5",
+  "express": "^5.2.1",
+  "kysely": "^0.27.6",
+  "pg": "^8.11.0"
+},
   "name": "@hcm/admin-api",
   "type": "module"
 }

@@ -199,15 +199,27 @@ importers:
 
   services/admin-api:
     dependencies:
+      '@hcm/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@hcm/hospitality-contracts':
         specifier: workspace:*
         version: link:../../packages/hospitality-contracts
       '@hcm/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.6
       express:
         specifier: ^5.2.1
         version: 5.2.1
+      kysely:
+        specifier: ^0.27.6
+        version: 0.27.6
+      pg:
+        specifier: ^8.11.0
+        version: 8.23.1
     devDependencies:
       '@types/cors':
         specifier: ^2.8.19
@@ -1884,6 +1896,10 @@ packages:
 
   core-util-is@1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
+
+  cors@2.8.6:
+    resolution: {integrity: sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==}
+    engines: {node: '>= 0.10'}
 
   cpu-features@0.0.10:
     resolution: {integrity: sha512-9IkYqtX3YHPCzoVg1Py+o9057a3i0fp7S530UWokCSaFVTc7CwXPRiOjRjBQQ18ZCNafx78YfnG+HALxtVmOGA==}
@@ -4631,6 +4647,11 @@ snapshots:
   cookie@1.1.1: {}
 
   core-util-is@1.0.3: {}
+
+  cors@2.8.6:
+    dependencies:
+      object-assign: 4.1.1
+      vary: 1.1.2
 
   cpu-features@0.0.10:
     dependencies:
