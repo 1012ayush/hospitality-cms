@@ -8,8 +8,10 @@
     "dev": "tsx watch src/index.ts"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^20.17.10",
+    "@types/pg": "^8.23.1",
     "tsx": "^4.19.2",
     "vitest": "^2.1.5"
   },
