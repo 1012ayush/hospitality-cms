@@ -28,7 +28,7 @@ app.get('/health', (req, res) => {
 });
 
 // 4. THIS FIXES THE ARI MATRIX 404 ERROR
-app.get('/api/inventory', async (req, res) => {
+app.get('/v1/dev-dashboard/snapshot', async (req, res) => {
     if (!db) return res.status(500).json({ error: 'No database connection' });
     try {
         const inventory = await sql`SELECT * FROM hcm.inventory_days ORDER BY stay_date ASC LIMIT 100`.execute(db);
@@ -39,7 +39,7 @@ app.get('/api/inventory', async (req, res) => {
 });
 
 // 5. THIS FIXES THE SYNC INSPECTOR 404 ERROR
-app.get('/api/sync', async (req, res) => {
+app.get('/v1/dev-dashboard/sync-logs', async (req, res) => {
     if (!db) return res.status(500).json({ error: 'No database connection' });
     try {
         const logs = await sql`
