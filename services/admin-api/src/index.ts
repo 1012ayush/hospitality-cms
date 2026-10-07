@@ -52,8 +52,8 @@ app.get('/v1/dev-dashboard/sync-logs', async (req, res) => {
           ORDER BY event_id DESC LIMIT 50
         `.execute(db);
         
-        // Wrap the array in a "data" property!
-        res.json({ data: logs.rows });
+        // FIXED: Wrap the array in 'logs' so .map() doesn't crash
+        res.json({ logs: logs.rows });
         
     } catch (error) {
         res.status(500).json({ error: String(error) });
