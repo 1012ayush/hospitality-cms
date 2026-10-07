@@ -27,18 +27,21 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', service: 'admin-api' });
 });
 
-// 4. THIS FIXES THE ARI MATRIX 404 ERROR
+// 4. ARI MATRIX ROUTE
 app.get('/v1/dev-dashboard/snapshot', async (req, res) => {
     if (!db) return res.status(500).json({ error: 'No database connection' });
     try {
         const inventory = await sql`SELECT * FROM hcm.inventory_days ORDER BY stay_date ASC LIMIT 100`.execute(db);
-        res.json(inventory.rows);
+        
+        // Wrap the array in a "data" property!
+        res.json({ data: inventory.rows }); 
+        
     } catch (error) {
         res.status(500).json({ error: String(error) });
     }
 });
 
-// 5. THIS FIXES THE SYNC INSPECTOR 404 ERROR
+// 5. SYNC INSPECTOR ROUTE
 app.get('/v1/dev-dashboard/sync-logs', async (req, res) => {
     if (!db) return res.status(500).json({ error: 'No database connection' });
     try {
@@ -48,7 +51,10 @@ app.get('/v1/dev-dashboard/sync-logs', async (req, res) => {
           FROM hcm.processed_events 
           ORDER BY event_id DESC LIMIT 50
         `.execute(db);
-        res.json(logs.rows);
+        
+        // Wrap the array in a "data" property!
+        res.json({ data: logs.rows });
+        
     } catch (error) {
         res.status(500).json({ error: String(error) });
     }
