@@ -32,10 +32,10 @@ app.get('/v1/dev-dashboard/snapshot', async (req, res) => {
     if (!db) return res.status(500).json({ error: 'No database connection' });
     try {
         const inventory = await sql`SELECT * FROM hcm.inventory_days ORDER BY stay_date ASC LIMIT 500`.execute(db);
-        
+
         // FIX 1: Add <string, any> to the Map
         const roomMap = new Map<string, any>();
-        
+
         // FIX 2: Add `as any[]` to bypass raw SQL type errors
         for (const row of inventory.rows as any[]) {
             const roomId = String(row.room_type_id || 'unknown');
@@ -47,7 +47,7 @@ app.get('/v1/dev-dashboard/snapshot', async (req, res) => {
                     cells: []
                 });
             }
-            
+
             // FIX 3: Add `!` after get() to tell TypeScript we know it is not undefined
             roomMap.get(roomId)!.cells.push({
                 date: new Date(row.stay_date).toISOString().slice(0, 10),
@@ -77,19 +77,34 @@ app.get('/v1/dev-dashboard/snapshot', async (req, res) => {
 });
 
 // 5. SYNC INSPECTOR ROUTE
+// 5. SYNC INSPECTOR ROUTE (Updated to query real sync_logs)
 app.get('/v1/dev-dashboard/sync-logs', async (req, res) => {
     if (!db) return res.status(500).json({ error: 'No database connection' });
+
+    // The dashboard passes the propertyId in the URL, we must filter by it
+    const propertyId = req.query.propertyId as string;
+    if (!propertyId) return res.json({ logs: [] });
+
     try {
         const logs = await sql`
-          SELECT event_id, event_type as operation, outcome as status, 
-                 organization_id as channel, source_version as time 
-          FROM hcm.processed_events 
-          ORDER BY event_id DESC LIMIT 50
+          SELECT 
+            logged_at as "loggedAt",
+            property_id as "propertyId",
+            channel_connection_id as "channelConnectionId",
+            channel,
+            operation,
+            status,
+            lock_wait_ms as "lockWaitMs",
+            db_commit_ms as "dbCommitMs",
+            http_status as "httpStatus",
+            error_code as "errorCode"
+          FROM hcm.sync_logs 
+          WHERE property_id = ${propertyId}
+          ORDER BY logged_at DESC 
+          LIMIT 50
         `.execute(db);
-        
-        // FIXED: Wrap the array in 'logs' so .map() doesn't crash
+
         res.json({ logs: logs.rows });
-        
     } catch (error) {
         res.status(500).json({ error: String(error) });
     }
