@@ -82,7 +82,6 @@ app.get('/v1/dev-dashboard/snapshot', async (req, res) => {
 app.get('/v1/dev-dashboard/sync-logs', async (req, res) => {
     if (!db) return res.status(500).json({ error: 'No database connection' });
 
-    // The dashboard passes the propertyId in the URL, we must filter by it
     const propertyId = req.query.propertyId as string;
     if (!propertyId) return res.json({ logs: [] });
 
@@ -92,7 +91,7 @@ app.get('/v1/dev-dashboard/sync-logs', async (req, res) => {
             logged_at as "loggedAt",
             property_id as "propertyId",
             channel_connection_id as "channelConnectionId",
-            channel,
+            'booking_com' as channel, /* FIX: Provide a default string to prevent DB crash */
             operation,
             status,
             lock_wait_ms as "lockWaitMs",
