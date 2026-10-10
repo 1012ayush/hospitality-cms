@@ -41,7 +41,7 @@ app.get("/v1/dev-dashboard/snapshot",async(req:any,res:any)=>{
     AND sl.direction='outbound' AND (c.id IS NULL OR sl.channel_connection_id=c.id)
     AND COALESCE(sl.details->>'roomTypeId',sl.details->>'room_type_id')=rt.room_type_id::text
     AND COALESCE(sl.details->>'stayDate',sl.details->>'stay_date')=i.stay_date::text ORDER BY sl.logged_at DESC LIMIT 1)sync ON true
-   WHERE p.organization_id=$${tenant}::uuid AND p.active AND ($${propertyId??null}::uuid IS NULL OR p.property_id=$${propertyId??null}::uuid)
+   WHERE p.organization_id=${tenant}::uuid AND p.active AND (${propertyId??null}::uuid IS NULL OR p.property_id=${propertyId??null}::uuid)
    ORDER BY p.name,rt.name,i.stay_date`.execute(trx);
   const connectionRows=(await sql<{propertyId:UUID;connectionId:UUID;channel:string;label:string;enabled:boolean}>`SELECT cc.property_id AS "propertyId",cc.channel_connection_id AS "connectionId",ch.kind::text AS channel,ch.name AS label,cc.enabled
     FROM hcm.channel_connections cc JOIN hcm.channels ch ON ch.organization_id=cc.organization_id AND ch.channel_id=cc.channel_id
@@ -67,9 +67,9 @@ app.get("/v1/dev-dashboard/sync-logs",async(req:any,res:any)=>{
   sl.http_status AS "httpStatus",sl.sanitized_error_code AS "errorCode",sl.duration_ms AS "durationMs",sl.direction::text AS direction,sl.attempt,sl.correlation_id AS "correlationId"
   FROM hcm.sync_logs sl LEFT JOIN hcm.channel_connections cc ON cc.organization_id=sl.organization_id AND cc.channel_connection_id=sl.channel_connection_id
   LEFT JOIN hcm.channels ch ON ch.organization_id=cc.organization_id AND ch.channel_id=cc.channel_id
-  WHERE sl.organization_id=$${tenant}::uuid AND sl.property_id=$${propertyId}::uuid
-   AND ($${connectionId??null}::uuid IS NULL OR sl.channel_connection_id=$${connectionId??null}::uuid)
-  ORDER BY sl.logged_at DESC LIMIT $${Math.min(limit,200)}`.execute(trx));
+  WHERE sl.organization_id=${tenant}::uuid AND sl.property_id=${propertyId}::uuid
+   AND (${connectionId??null}::uuid IS NULL OR sl.channel_connection_id=${connectionId??null}::uuid)
+  ORDER BY sl.logged_at DESC LIMIT ${Math.min(limit,200)}`.execute(trx));
   return res.set("Cache-Control","no-store").json({logs:result.rows});}catch(e){console.error("Sync logs query failed",e);return res.status(500).json({error:"dashboard_sync_logs_failed"});}
 });
 const port=Number(process.env.PORT)||3000,server=app.listen(port,"0.0.0.0",()=>console.log("Admin API listening on 0.0.0.0:"+port));
