@@ -72,6 +72,7 @@ app.get('/v1/dev-dashboard/snapshot', async (req, res) => {
 
         res.json(snapshot);
     } catch (error) {
+        console.error("Endpoint error:", error);
         res.status(500).json({ error: String(error) });
     }
 });
@@ -106,6 +107,7 @@ app.get('/v1/dev-dashboard/sync-logs', async (req, res) => {
 
         res.json({ logs: logs.rows });
     } catch (error) {
+        console.error("Endpoint error:", error);
         res.status(500).json({ error: String(error) });
     }
 });
