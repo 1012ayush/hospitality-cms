@@ -937,7 +937,7 @@ export async function runReservationConsumer(
   await consumer.connect();
   await consumer.subscribe({
     topic: "reservation.canonical.events",
-    fromBeginning: false,
+    fromBeginning: true,
   });
   await consumer.run({
     autoCommit: false,
