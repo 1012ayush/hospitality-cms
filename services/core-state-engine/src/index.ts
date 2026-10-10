@@ -172,8 +172,12 @@ async function mutateInTransaction(
     VALUES (${orgId}::uuid,${event.id},${reservation.channelConnectionId}::uuid,${idemDigest},${eventType},${reservation.channelVersion},'applied')
     ON CONFLICT DO NOTHING RETURNING event_id
   `.execute(trx);
-  if (eventInserted.rows.length === 0)
+  if (eventInserted.rows.length === 0) {
+    await sql`INSERT INTO hcm.sync_logs
+      (organization_id,property_id,channel_connection_id,direction,status,operation,correlation_id,external_reference,details)
+      VALUES (${orgId}::uuid,${reservation.propertyId}::uuid,${reservation.channelConnectionId}::uuid,'inbound','acknowledged',${eventType},${event.id},${reservation.reservationId},${JSON.stringify({outcome:"duplicate",sourceSequence:reservation.sourceSequence})}::jsonb)`.execute(trx);
     return { committed: true, outcome: "duplicate" };
+  }
 
   const existingResult = await sql<{
     reservation_id: string;
@@ -195,6 +199,9 @@ async function mutateInTransaction(
     await sql`UPDATE hcm.processed_events SET outcome='stale' WHERE organization_id=${orgId}::uuid AND event_id=${event.id}`.execute(
       trx,
     );
+    await sql`INSERT INTO hcm.sync_logs
+      (organization_id,property_id,channel_connection_id,direction,status,operation,correlation_id,external_reference,details)
+      VALUES (${orgId}::uuid,${reservation.propertyId}::uuid,${reservation.channelConnectionId}::uuid,'inbound','acknowledged',${eventType},${event.id},${reservation.reservationId},${JSON.stringify({outcome:"stale",sourceSequence:reservation.sourceSequence,currentSourceSequence:existing.source_sequence})}::jsonb)`.execute(trx);
     return {
       committed: true,
       outcome: "stale",
@@ -488,6 +495,9 @@ async function mutateInTransaction(
       autoClose,
     );
   }
+  await sql`INSERT INTO hcm.sync_logs
+    (organization_id,property_id,channel_connection_id,direction,status,operation,correlation_id,external_reference,details)
+    VALUES (${orgId}::uuid,${reservation.propertyId}::uuid,${reservation.channelConnectionId}::uuid,'inbound','succeeded',${eventType},${event.id},${reservation.reservationId},${JSON.stringify({outcome:"applied",oversold,sourceSequence:reservation.sourceSequence,changedInventoryDates:changedKeys.length})}::jsonb)`.execute(trx);
   return {
     committed: true,
     outcome: "applied",
@@ -983,7 +993,7 @@ async function main(): Promise<void> {
   logger.info("Core state engine dependencies connected");
   // ADD THE DUMMY WEB SERVER
   const app = express();
-  app.get('/health', (req, res) => res.status(200).json({ status: 'core-state-engine alive' }));
+  app.get('/health', (_req: any, res: any) => res.status(200).json({ status: 'core-state-engine alive' }));
 
   const PORT = Number(process.env.PORT) || 8082; 
 
