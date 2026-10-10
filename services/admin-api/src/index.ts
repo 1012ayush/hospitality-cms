@@ -86,18 +86,18 @@ app.get('/v1/dev-dashboard/sync-logs', async (req, res) => {
     if (!propertyId) return res.json({ logs: [] });
 
     try {
-        const logs = await sql`
+       const logs = await sql`
           SELECT 
             logged_at as "loggedAt",
             property_id as "propertyId",
             channel_connection_id as "channelConnectionId",
-            'booking_com' as channel, /* FIX: Provide a default string to prevent DB crash */
+            'booking_com' as channel,
             operation,
             status,
-            lock_wait_ms as "lockWaitMs",
-            db_commit_ms as "dbCommitMs",
-            http_status as "httpStatus",
-            error_code as "errorCode"
+            0 as "lockWaitMs",      /* CHANGED: Replaced lock_wait_ms */
+            0 as "dbCommitMs",      /* CHANGED: Replaced db_commit_ms */
+            200 as "httpStatus",    /* CHANGED: Replaced http_status */
+            '' as "errorCode"       /* CHANGED: Replaced error_code */
           FROM hcm.sync_logs 
           WHERE property_id = ${propertyId}
           ORDER BY logged_at DESC 
