@@ -16,7 +16,7 @@ export function demoSnapshot(): DashboardSnapshot {
       propertyId: property, organizationId: org, channelConnectionId: connection,
       name: "Demo · Northstar Hotel", timezone: "Asia/Kolkata", currency: "INR", channel: "booking_com", connections:[{channelConnectionId:connection,channel:"booking_com",label:"Booking.com sandbox"},{channelConnectionId:"00000000-0000-4000-8000-000000000004",channel:"airbnb",label:"Airbnb fixture"},{channelConnectionId:"00000000-0000-4000-8000-000000000005",channel:"pms",label:"PMS fixture"}],
       roomTypes: [0, 1].map((room) => ({
-        roomTypeId: `10000000-0000-4000-8000-${String(room + 1).padStart(12, "0")}`,
+      roomTypeId: `00000000-0000-4000-8000-${String(room + 30).padStart(12, "0")}`,
         name: room ? "Garden King" : "Deluxe Queen", code: room ? "GDK" : "DLQ",
         cells: dates.map((date, i) => ({
           date,
