@@ -1,5 +1,5 @@
 import express from "express";
-import { createHash } from "node:crypto";
+import { createHash , randomUUID} from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 import type { Redis } from "ioredis";
 import { withTenant, type HcmDatabase, type UUID } from "@hcm/db";
@@ -18,7 +18,8 @@ import type { Consumer, EachMessagePayload, Producer } from "kafkajs";
 import { createKafkaConsumer } from "@hcm/shared";
 import {
   CloudEventSchema,
-  ReservationSchema,
+  ReservationSchema,AriDeltaSchema,
+  type HospitalityEventType,
 } from "@hcm/hospitality-contracts";
 
 type ReservationEventType =
@@ -953,7 +954,200 @@ export async function runReservationConsumer(
     },
   });
 }
-
+export interface NormalizedEvent {
+  event: CloudEvent<unknown, HospitalityEventType>;
+  topic: "reservation.canonical.events" | "inventory.delta.events";
+}
+export interface PartnerPayloadNormalizer {
+  normalize(rawEvent: CloudEvent<unknown>): NormalizedEvent;
+}
+export class CanonicalEnvelopeNormalizer implements PartnerPayloadNormalizer {
+  normalize(rawEvent: CloudEvent<unknown>): NormalizedEvent {
+    const data = rawEvent.data as { payload?: unknown } | null;
+    const payload = data && typeof data === "object" ? data.payload : undefined;
+    if (
+      !payload ||
+      typeof payload !== "object" ||
+      !("canonicalEvent" in payload)
+    ) {
+      throw new NormalizationError(
+        "CANONICAL_EVENT_MISSING",
+        "Adapter did not supply a canonicalEvent envelope",
+      );
+    }
+    const parsedEnvelope = CloudEventSchema.safeParse(
+      (payload as { canonicalEvent: unknown }).canonicalEvent,
+    );
+    if (!parsedEnvelope.success) {
+      throw new NormalizationError(
+        "INVALID_CLOUDEVENT",
+        parsedEnvelope.error.issues
+          .map((issue) => `${issue.path.join(".")}:${issue.code}`)
+          .join(","),
+      );
+    }
+    const event = parsedEnvelope.data as CloudEvent<
+      unknown,
+      HospitalityEventType
+    >;
+    if (event.type === "com.hospitality.ari.delta") {
+      const result = AriDeltaSchema.safeParse(event.data);
+      if (!result.success)
+        throw new NormalizationError(
+          "INVALID_ARI_DELTA",
+          result.error.issues
+            .map((issue) => `${issue.path.join(".")}:${issue.code}`)
+            .join(","),
+        );
+      return {
+        event: { ...event, data: result.data },
+        topic: "inventory.delta.events",
+      };
+    }
+    if (
+      [
+        "com.hospitality.reservation.created",
+        "com.hospitality.reservation.modified",
+        "com.hospitality.reservation.cancelled",
+        "com.hospitality.reservation.no_show",
+      ].includes(event.type)
+    ) {
+      const result = ReservationSchema.safeParse(event.data);
+      if (!result.success)
+        throw new NormalizationError(
+          "INVALID_RESERVATION",
+          result.error.issues
+            .map((issue) => `${issue.path.join(".")}:${issue.code}`)
+            .join(","),
+        );
+      return {
+        event: { ...event, data: result.data },
+        topic: "reservation.canonical.events",
+      };
+    }
+    throw new NormalizationError(
+      "UNSUPPORTED_EVENT_TYPE",
+      `Unsupported canonical type ${event.type}`,
+    );
+  }
+}
+export class NormalizationError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "NormalizationError";
+  }
+}
+export async function processRawMessage(
+  message: EachMessagePayload,
+  producer: Producer,
+  normalizer: PartnerPayloadNormalizer,
+): Promise<void> {
+  const value = message.message.value?.toString("utf8");
+  let parsed: unknown;
+  try {
+    parsed = value ? JSON.parse(value) : undefined;
+  } catch {
+    parsed = undefined;
+  }
+  const rawResult = CloudEventSchema.safeParse(parsed);
+  const key = message.message.key?.toString() ?? "unknown-property";
+  if (!rawResult.success) {
+    await publishDlq(producer, key, {
+      sourceTopic: message.topic,
+      sourcePartition: message.partition,
+      sourceOffset: message.message.offset,
+      errorCode: "INVALID_RAW_CLOUDEVENT",
+      errorDetail: rawResult.error.issues
+        .map((issue) => `${issue.path.join(".")}:${issue.code}`)
+        .join(","),
+      raw: parsed ?? { undecodable: true },
+    });
+    return;
+  }
+  let normalized: NormalizedEvent;
+  try {
+    normalized = normalizer.normalize(rawResult.data as CloudEvent<unknown>);
+  } catch (error) {
+    const normalizationError =
+      error instanceof NormalizationError
+        ? error
+        : new NormalizationError(
+            "NORMALIZER_FAILURE",
+            "Unexpected normalizer failure",
+          );
+    await publishDlq(producer, key, {
+      sourceTopic: message.topic,
+      sourcePartition: message.partition,
+      sourceOffset: message.message.offset,
+      eventId: rawResult.data.id,
+      eventType: rawResult.data.type,
+      errorCode: normalizationError.code,
+      errorDetail: normalizationError.message,
+      raw: rawResult.data,
+    });
+    return;
+  }
+  await producer.send({
+    topic: normalized.topic,
+    acks: -1,
+    messages: [
+      {
+        key,
+        value: JSON.stringify(normalized.event),
+        headers: { "content-type": "application/cloudevents+json" },
+      },
+    ],
+  });
+}
+async function publishDlq(
+  producer: Producer,
+  key: string,
+  detail: Record<string, unknown>,
+): Promise<void> {
+  const dlqEvent = {
+    specversion: "1.0",
+    id: randomUUID(), // You will need to ensure `import { randomUUID } from "node:crypto";` is at the very top of your file
+    source: "normalizer",
+    type: "com.hospitality.event.dead_lettered",
+    time: new Date().toISOString(),
+    datacontenttype: "application/json",
+    data: { ...detail, deadLetteredAt: new Date().toISOString() },
+  };
+  await producer.send({
+    topic: "dead.letter.queue",
+    acks: -1,
+    messages: [{ key, value: JSON.stringify(dlqEvent) }],
+  });
+}
+export async function startNormalizer(
+  consumer: Consumer,
+  producer: Producer,
+  normalizer: PartnerPayloadNormalizer,
+): Promise<void> {
+  await consumer.connect();
+  await producer.connect();
+  await consumer.subscribe({
+    topic: "webhook.raw.events",
+    fromBeginning: true, // Switched to true so it catches webhooks sent while Render was asleep
+  });
+  await consumer.run({
+    autoCommit: false,
+    eachMessage: async (payload) => {
+      await processRawMessage(payload, producer, normalizer);
+      const nextOffset = (BigInt(payload.message.offset) + 1n).toString();
+      await consumer.commitOffsets([
+        {
+          topic: payload.topic,
+          partition: payload.partition,
+          offset: nextOffset,
+        },
+      ]);
+    },
+  });
+}
 async function main(): Promise<void> {
   const config = loadConfig();
   if (!config.databaseUrl) throw new Error("DATABASE_URL is required");
@@ -989,6 +1183,10 @@ async function main(): Promise<void> {
     kafka,
     process.env.KAFKA_GROUP_ID ?? "hcm-core-state-v1",
   );
+  const normalizerConsumer = createKafkaConsumer(
+    kafka,
+    process.env.KAFKA_NORMALIZER_GROUP_ID ?? "hcm-normalizer-v1"
+  );
   await producer.connect();
   logger.info("Core state engine dependencies connected");
   // ADD THE DUMMY WEB SERVER
@@ -1006,9 +1204,11 @@ async function main(): Promise<void> {
   await Promise.all([
     runReservationConsumer(consumer, db, redis, producer),
     runOutboxRelay(workerDb, producer, abort.signal),
+    startNormalizer(normalizerConsumer, producer, new CanonicalEnvelopeNormalizer())
   ]);
   await Promise.all([
     consumer.disconnect(),
+    normalizerConsumer.disconnect(),
     db.destroy(),
     workerDb.destroy(),
     redis.quit(),
