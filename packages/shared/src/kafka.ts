@@ -24,7 +24,7 @@ export function createKafkaClient(
       ca: caCert ? [caCert] : undefined,
     };
     kafkaConfig.sasl = {
-      mechanism: 'plain' as const, // The "as const" fixes the red line!
+      mechanism: 'scram-sha-256' as const, // The "as const" fixes the red line!
       username: process.env.KAFKA_SASL_USERNAME!,
       password: process.env.KAFKA_SASL_PASSWORD!,
     };
